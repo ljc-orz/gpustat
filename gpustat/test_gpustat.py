@@ -23,6 +23,7 @@ import gpustat
 from gpustat.core import (
     GPUStat,
     _cuda_device_pci_bus_ids,
+    _cuda_pci_bus_ids_match_nvml,
     _reorder_gpus_by_cuda_device_order,
 )
 from gpustat.nvml import pynvml, pynvml_monkeypatch
@@ -521,11 +522,15 @@ class TestGPUStat(object):
 
         ordered = _reorder_gpus_by_cuda_device_order(
             gpus,
-            ["0000:01:00.0", "0000:02:00.0", "0000:03:00.0"],
+            ["00000000:01:00.0", "00000000:02:00.0", "00000000:03:00.0"],
             ["0000:03:00.0", "0000:01:00.0"],
         )
 
         assert [gpu.index for gpu in ordered] == [2, 0, 1]
+        assert _cuda_pci_bus_ids_match_nvml(
+            ["0000:03:00.0", "0000:01:00.0"],
+            ["00000000:01:00.0", "00000000:02:00.0", "00000000:03:00.0"],
+        )
 
     def test_cuda_device_order_fallback_reason(self, monkeypatch):
         monkeypatch.setenv("CUDA_DEVICE_ORDER", "INVALID_ORDER")

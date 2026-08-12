@@ -115,14 +115,45 @@ def _reorder_gpus_by_cuda_device_order(
     ordered = []
 
     for cuda_pci_bus_id in cuda_pci_bus_ids:
-        normalized_cuda_bus_id = cuda_pci_bus_id.lower()
+        normalized_cuda_bus_id = _normalize_pci_bus_id(cuda_pci_bus_id)
         for position, (gpu, pci_bus_id) in enumerate(remaining):
-            if pci_bus_id and pci_bus_id.lower() == normalized_cuda_bus_id:
+            if (
+                pci_bus_id
+                and _normalize_pci_bus_id(pci_bus_id) == normalized_cuda_bus_id
+            ):
                 ordered.append(gpu)
                 del remaining[position]
                 break
 
     return ordered + [gpu for gpu, _ in remaining]
+
+
+def _normalize_pci_bus_id(pci_bus_id: str) -> str:
+    """Normalize CUDA and NVML PCI bus-ID representations for comparison."""
+    try:
+        domain, bus, device = pci_bus_id.strip().split(":")
+        return "{:04x}:{:02x}:{}".format(
+            int(domain, 16), int(bus, 16), device.lower()
+        )
+    except ValueError:
+        return pci_bus_id.strip().lower()
+
+
+def _cuda_pci_bus_ids_match_nvml(
+    cuda_pci_bus_ids: List[str], pci_bus_ids: List[Optional[str]]
+) -> bool:
+    """Return whether every CUDA device can be mapped to an NVML device."""
+    remaining_pci_bus_ids = [
+        _normalize_pci_bus_id(pci_bus_id)
+        for pci_bus_id in pci_bus_ids
+        if pci_bus_id is not None
+    ]
+    for cuda_pci_bus_id in cuda_pci_bus_ids:
+        try:
+            remaining_pci_bus_ids.remove(_normalize_pci_bus_id(cuda_pci_bus_id))
+        except ValueError:
+            return False
+    return True
 
 
 # Types
@@ -763,13 +794,17 @@ class GPUStatCollection(Sequence[GPUStat]):
             gpu_list.append(gpu_stat)
             pci_bus_ids.append(pci_bus_id)
 
-        if cuda_pci_bus_ids is not None and all(pci_bus_ids):
+        if (
+            cuda_pci_bus_ids is not None
+            and all(pci_bus_ids)
+            and _cuda_pci_bus_ids_match_nvml(cuda_pci_bus_ids, pci_bus_ids)
+        ):
             gpu_list = _reorder_gpus_by_cuda_device_order(
                 gpu_list, pci_bus_ids, cuda_pci_bus_ids
             )
         elif cuda_pci_bus_ids is not None:
             cuda_device_order_fallback_reason = (
-                "NVML could not retrieve every GPU PCI bus ID"
+                "CUDA Runtime PCI bus IDs could not be mapped to NVML devices"
             )
 
         # 2. additional info (driver version, etc).
