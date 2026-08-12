@@ -132,7 +132,6 @@ def loop_gpustat(interval=1.0, **kwargs):
 
 def main(*argv):
     """The main entrypoint to the gpustat CLI."""
-    print("hello")
 
     if not argv:
         argv = list(sys.argv)

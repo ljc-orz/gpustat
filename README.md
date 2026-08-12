@@ -90,6 +90,34 @@ Options (Please see `gpustat --help` for more details):
   (before setting `CUDA_VISIBLE_DEVICES` for your CUDA program):
   `export CUDA_DEVICE_ORDER=PCI_BUS_ID`.
 
+### CUDA device-order display / CUDA 设备顺序显示
+
+When `CUDA_DEVICE_ORDER` is set to `FASTEST_FIRST` or `PCI_BUS_ID`, `gpustat`
+queries the CUDA Runtime and displays GPUs in CUDA's actual enumeration order.
+The displayed IDs are renumbered consecutively from `0`, so they match CUDA
+logical device IDs. The original NVML indices are preserved in the Python API
+and `--json` output.
+
+当设置 `CUDA_DEVICE_ORDER=FASTEST_FIRST` 或 `CUDA_DEVICE_ORDER=PCI_BUS_ID`
+时，`gpustat` 会查询 CUDA Runtime，并按 CUDA 实际枚举的设备顺序显示 GPU。
+终端中显示的编号会从 `0` 开始连续重排，从而对应 CUDA 逻辑设备编号；Python API
+和 `--json` 输出中的原始 NVML 物理编号保持不变。
+
+```bash
+# Display GPUs in CUDA's performance-based enumeration order.
+# 按 CUDA 的性能启发式枚举顺序显示 GPU。
+CUDA_DEVICE_ORDER=FASTEST_FIRST gpustat
+
+# Display GPUs in ascending PCI Bus ID order.
+# 按 PCI Bus ID 升序显示 GPU。
+CUDA_DEVICE_ORDER=PCI_BUS_ID gpustat
+```
+
+If CUDA Runtime or PCI bus-ID mapping is unavailable, `gpustat` prints a
+warning to standard error and uses the default NVML order. 若 CUDA Runtime
+或 PCI Bus ID 映射不可用，`gpustat` 会向标准错误输出警告，并回退到默认 NVML
+顺序。
+
 
 ### Python API
 
