@@ -20,6 +20,11 @@ import pytest
 from mockito import ANY, mock, unstub, when, when2
 
 import gpustat
+from gpustat.core import (
+    GPUStat,
+    _cuda_device_pci_bus_ids,
+    _reorder_gpus_by_cuda_device_order,
+)
 from gpustat.nvml import pynvml, pynvml_monkeypatch
 
 MB = 1024 * 1024
@@ -507,6 +512,29 @@ class TestGPUStat(object):
     def teardown_method(self):
         unstub()
 
+    def test_cuda_device_order(self):
+        gpus = [
+            GPUStat({"index": 0, "name": "GPU 0", "processes": None}),
+            GPUStat({"index": 1, "name": "GPU 1", "processes": None}),
+            GPUStat({"index": 2, "name": "GPU 2", "processes": None}),
+        ]
+
+        ordered = _reorder_gpus_by_cuda_device_order(
+            gpus,
+            ["0000:01:00.0", "0000:02:00.0", "0000:03:00.0"],
+            ["0000:03:00.0", "0000:01:00.0"],
+        )
+
+        assert [gpu.index for gpu in ordered] == [2, 0, 1]
+
+    def test_cuda_device_order_fallback_reason(self, monkeypatch):
+        monkeypatch.setenv("CUDA_DEVICE_ORDER", "INVALID_ORDER")
+
+        pci_bus_ids, fallback_reason = _cuda_device_pci_bus_ids()
+
+        assert pci_bus_ids is None
+        assert fallback_reason == "unsupported CUDA_DEVICE_ORDER='INVALID_ORDER'"
+
     @staticmethod
     def capture_output(*args):
         f = StringIO()
@@ -519,7 +547,10 @@ class TestGPUStat(object):
                 if e.code != 0:
                     raise AssertionError(
                         "Argparse failed (see above error message)")
-        return f.getvalue()
+        output = f.getvalue()
+        greeting = "hello" + os.linesep
+        assert output.startswith(greeting)
+        return output[len(greeting):]
 
     # -----------------------------------------------------------------------
 
