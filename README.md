@@ -94,14 +94,13 @@ Options (Please see `gpustat --help` for more details):
 
 When `CUDA_DEVICE_ORDER` is set to `FASTEST_FIRST` or `PCI_BUS_ID`, `gpustat`
 queries the CUDA Runtime and displays GPUs in CUDA's actual enumeration order.
-The displayed IDs are renumbered consecutively from `0`, so they match CUDA
-logical device IDs. The original NVML indices are preserved in the Python API
-and `--json` output.
+GPU IDs are renumbered consecutively from `0` in terminal output, the Python
+API, and `--json`, so they match CUDA logical device IDs.
 
 当设置 `CUDA_DEVICE_ORDER=FASTEST_FIRST` 或 `CUDA_DEVICE_ORDER=PCI_BUS_ID`
 时，`gpustat` 会查询 CUDA Runtime，并按 CUDA 实际枚举的设备顺序显示 GPU。
-终端中显示的编号会从 `0` 开始连续重排，从而对应 CUDA 逻辑设备编号；Python API
-和 `--json` 输出中的原始 NVML 物理编号保持不变。
+终端输出、Python API 和 `--json` 中的 GPU 编号都会从 `0` 开始连续重排，从而
+对应 CUDA 逻辑设备编号。
 
 ```bash
 # Display GPUs in CUDA's performance-based enumeration order.

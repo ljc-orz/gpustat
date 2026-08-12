@@ -212,7 +212,7 @@ class GPUStat:
 
     @property
     def index(self) -> int:
-        """Returns the index of GPU (as in nvidia-smi --query-gpu=index)."""
+        """Return the GPU index, following CUDA order when it is applied."""
         return self.entry["index"]
 
     @property
@@ -580,6 +580,9 @@ class GPUStatCollection(Sequence[GPUStat]):
         self.driver_version = driver_version
         self.cuda_device_order_fallback_reason = cuda_device_order_fallback_reason
         self.cuda_device_order_applied = cuda_device_order_applied
+        if cuda_device_order_applied:
+            for cuda_index, gpu in enumerate(self.gpus):
+                gpu.entry["index"] = cuda_index
 
     @staticmethod
     def clean_processes():

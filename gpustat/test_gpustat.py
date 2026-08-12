@@ -562,7 +562,8 @@ class TestGPUStat(object):
         gpustats.print_formatted(fp=fp, no_color=True, no_processes=True, show_header=False)
 
         assert [line[:3] for line in fp.getvalue().splitlines()] == ["[0]", "[1]"]
-        assert [gpu.index for gpu in gpustats] == [4, 1]
+        assert [gpu.index for gpu in gpustats] == [0, 1]
+        assert [gpu.jsonify()["index"] for gpu in gpustats] == [0, 1]
 
     @staticmethod
     def capture_output(*args):
