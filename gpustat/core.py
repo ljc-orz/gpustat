@@ -324,6 +324,7 @@ class GPUStat:
         self,
         fp,
         *,
+        display_index=None,
         with_colors=True,  # deprecated arg
         show_cmd=False,
         show_full_cmd=False,
@@ -432,7 +433,9 @@ class GPUStat:
 
         safe_self = cast(GPUStat, SafePropertyAccessor(self))
 
-        _write(f"[{self.index}]", color=term.cyan)
+        if display_index is None:
+            display_index = self.index
+        _write(f"[{display_index}]", color=term.cyan)
         _write(" ")
 
         if gpuname_width is None or gpuname_width != 0:
@@ -567,6 +570,7 @@ class GPUStatCollection(Sequence[GPUStat]):
         gpu_list: Sequence[GPUStat],
         driver_version: Optional[str] = None,
         cuda_device_order_fallback_reason: Optional[str] = None,
+        cuda_device_order_applied: bool = False,
     ):
         self.gpus = list(gpu_list)
 
@@ -575,6 +579,7 @@ class GPUStatCollection(Sequence[GPUStat]):
         self.query_time = datetime.now()
         self.driver_version = driver_version
         self.cuda_device_order_fallback_reason = cuda_device_order_fallback_reason
+        self.cuda_device_order_applied = cuda_device_order_applied
 
     @staticmethod
     def clean_processes():
@@ -794,6 +799,7 @@ class GPUStatCollection(Sequence[GPUStat]):
             gpu_list.append(gpu_stat)
             pci_bus_ids.append(pci_bus_id)
 
+        cuda_device_order_applied = False
         if (
             cuda_pci_bus_ids is not None
             and all(pci_bus_ids)
@@ -802,6 +808,7 @@ class GPUStatCollection(Sequence[GPUStat]):
             gpu_list = _reorder_gpus_by_cuda_device_order(
                 gpu_list, pci_bus_ids, cuda_pci_bus_ids
             )
+            cuda_device_order_applied = True
         elif cuda_pci_bus_ids is not None:
             cuda_device_order_fallback_reason = (
                 "CUDA Runtime PCI bus IDs could not be mapped to NVML devices"
@@ -823,6 +830,7 @@ class GPUStatCollection(Sequence[GPUStat]):
             gpu_list,
             driver_version=driver_version,
             cuda_device_order_fallback_reason=cuda_device_order_fallback_reason,
+            cuda_device_order_applied=cuda_device_order_applied,
         )
 
     def __len__(self):
@@ -905,9 +913,12 @@ class GPUStatCollection(Sequence[GPUStat]):
             fp.write(eol_char)
 
         # body
-        for g in self:
+        for display_index, g in enumerate(self):
             g.print_to(
                 fp,
+                display_index=(
+                    display_index if self.cuda_device_order_applied else None
+                ),
                 show_cmd=show_cmd,
                 show_full_cmd=show_full_cmd,
                 no_processes=no_processes,

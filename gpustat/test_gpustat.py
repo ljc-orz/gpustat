@@ -22,6 +22,7 @@ from mockito import ANY, mock, unstub, when, when2
 import gpustat
 from gpustat.core import (
     GPUStat,
+    GPUStatCollection,
     _cuda_device_pci_bus_ids,
     _cuda_pci_bus_ids_match_nvml,
     _reorder_gpus_by_cuda_device_order,
@@ -539,6 +540,29 @@ class TestGPUStat(object):
 
         assert pci_bus_ids is None
         assert fallback_reason == "unsupported CUDA_DEVICE_ORDER='INVALID_ORDER'"
+
+    def test_cuda_device_order_display_indexes(self):
+        gpus = [
+            GPUStat(
+                {
+                    "index": index,
+                    "name": "GPU %d" % index,
+                    "temperature.gpu": None,
+                    "utilization.gpu": None,
+                    "memory.used": 0,
+                    "memory.total": 1,
+                    "processes": None,
+                }
+            )
+            for index in (4, 1)
+        ]
+        gpustats = GPUStatCollection(gpus, cuda_device_order_applied=True)
+        fp = StringIO()
+
+        gpustats.print_formatted(fp=fp, no_color=True, no_processes=True, show_header=False)
+
+        assert [line[:3] for line in fp.getvalue().splitlines()] == ["[0]", "[1]"]
+        assert [gpu.index for gpu in gpustats] == [4, 1]
 
     @staticmethod
     def capture_output(*args):
